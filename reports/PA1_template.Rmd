@@ -1,0 +1,123 @@
+---
+title: "PA1_template"
+author: "Pavel Pustovoyt"
+date: "22 January 2016"
+output: html_document
+---
+
+Required libraries: `ggplot2, dplyr`
+
+### Loading and preprocessing the data
+
+Loading `activity` data:
+
+```{r}
+options(scipen=100, digits=1)
+suppressMessages(library(ggplot2))
+suppressMessages(library(dplyr))
+activity <- read.csv("../data/activity.csv", stringsAsFactors = FALSE)
+```
+
+
+### What is mean total number of steps taken per day?
+
+First lets remove `NA` values and group data by `date` summing number of `steps`:
+```{r, echo=TRUE}
+activityNoNA <- filter(activity, !is.na(steps))
+sumByDay <- summarise(group_by(activityNoNA, date), steps = sum(steps))
+head(sumByDay)
+```
+
+Now lets plot histogram:
+```{r, echo=TRUE}
+ggplot(sumByDay) + geom_histogram(aes(steps, fill=..count..), binwidth = 2000) + scale_fill_gradient(low="skyblue", high = "skyblue4")
+```
+
+Average steps per day:
+```{r, echo=TRUE}
+mean(sumByDay$steps) #sum(activity$steps, na.rm =TRUE)/length(unique(activity$date))
+```
+Median:
+```{r, echo=TRUE}
+median(sumByDay$steps)
+```
+
+
+
+### What is the average daily activity pattern?
+
+Grouping data by `interval` and taking `mean`:
+```{r, echo=TRUE}
+avgByInterval <- summarise(group_by(activityNoNA, interval), steps = mean(steps))
+head(avgByInterval)
+```
+
+Time series plot of the average number of steps taken:
+```{r, echo=TRUE}
+ggplot(avgByInterval) + geom_line(aes(x = interval, y = steps, colour=steps)) + scale_colour_gradient(low="skyblue", high = "darkblue")
+```
+
+The 5-minute interval that, on average, contains the maximum number of steps:
+```{r, echo=TRUE}
+max(avgByInterval$steps)
+```
+
+
+### Imputing missing values
+
+Total number of missing values:
+```{r, echo=TRUE}
+sum(is.na(activity$steps))
+```
+
+Filling missing interval data with average for that interval across all days:
+
+```{r, echo=TRUE}
+#Joining average value for every interval
+activityFilled <- merge(activity, avgByInterval, by = c("interval"))
+#Ordering by date and interval
+activityFilled <- arrange(activityFilled, date, interval)
+#Filling empty values
+activityFilled$steps <- ifelse(is.na(activityFilled$steps.x), activityFilled$steps.y, activityFilled$steps.x)
+activityFilled <- select(activityFilled, -steps.x, -steps.y)
+```
+
+### Imputing missing values
+
+Histogram of average steps per day after filling `NA` values:
+```{r, echo=TRUE}
+sumByDayFilled <- summarise(group_by(activityFilled, date), steps = sum(steps))
+ggplot(sumByDayFilled) + geom_histogram(aes(steps, fill=..count..), binwidth = 2000) + scale_fill_gradient(low="skyblue", high = "skyblue4")
+```
+
+Mean after filling values:
+```{r, echo=TRUE}
+mean(sumByDayFilled$steps)
+```
+
+Median after filling values:
+```{r, echo=TRUE}
+median(sumByDayFilled$steps)
+```
+
+### Are there differences in activity patterns between weekdays and weekends?
+
+Defining day of week and type of day for every interval:
+```{r, echo=TRUE}
+activityFilled$day <- weekdays(as.Date(activityFilled$date))
+activityFilled$dayType <- as.factor(ifelse(activityFilled$day %in% c("Sunday","Saturday"), "weekend","weekday"))
+head(activityFilled)
+```
+
+Gouping by `interval` and `dayType`:
+```{r, echo=TRUE}
+avgByIntervalFilled <- summarise(group_by(activityFilled, interval, dayType), steps = mean(steps))
+head(avgByIntervalFilled)
+```
+
+Plotting graph to compare weekends and weekdays(to make it two-paneled you just need to uncomment end of line, personally I like both lines on the same plot):
+```{r, echo=TRUE}
+ggplot(avgByIntervalFilled) + geom_line(aes(x = interval, y = steps, group=dayType, colour=dayType)) # + facet_grid(dayType~.)
+```
+
+Looks like guy is very active in the mornings =)
