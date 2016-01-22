@@ -1,1 +1,1 @@
-### You can find `PA1_template.Rmd` and it's `HTML` version in the `report` folder
+#### You can find `PA1_template.Rmd` and it's `HTML` version in the `reports` folder
